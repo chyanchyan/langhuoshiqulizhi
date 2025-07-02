@@ -4,6 +4,7 @@ from datetime import datetime as dt
 import os
 from werkzeug.utils import secure_filename
 from serveices.curd import get_player_record_data
+import configparser
 
 
 app = Flask(__name__)
@@ -31,6 +32,25 @@ def health_check():
         'timestamp': dt.now().isoformat()
     })
 
+
+@app.route('/api/enterAuth')
+def enter_auth():
+    token = request.args.get('token')
+    parser = configparser.ConfigParser()
+    compare = parser.get('token', 'token')
+    if token == compare:
+        return jsonify({
+            'data': 0,
+            'status': 'success',
+            'message': 'token 验证成功'
+        })
+    else:
+        return jsonify({
+            'data': 1,
+            'status': 'error',
+            'message': 'token 验证失败'
+        })
+
 @app.route('/api/uploadRecordPic')
 def upload_record_pic():
     """上传记录图片接口"""
@@ -54,7 +74,7 @@ def upload_record_pic():
         return jsonify({'error': 'Failed to upload file'}), 500
 
 
-@app.route('/api/getplayerRecord')
+@app.route('/api/getPlayerRecord')
 def get_player_record():
     """获取玩家记录接口"""
     data = get_player_record_data()
@@ -63,8 +83,6 @@ def get_player_record():
         'status': 'success',
         'message': '获取玩家记录成功'
     })
-
-
 
 @app.errorhandler(404)
 def not_found(error):
