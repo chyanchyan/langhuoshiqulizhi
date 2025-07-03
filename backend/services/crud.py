@@ -1,10 +1,29 @@
 from PIL import Image
 import pytesseract
 import json
-from serveices.db_manager import DbManager
+from services.db_manager import DbManager
 import pandas as pd
+from pydantic import BaseModel, validator
 
 def booking_record_pic(image_path):
+
+    # 手动标注的区域坐标（示例）——你需要把这些换成你的坐标
+    title_box = (150, 120, 200, 160)
+    time_box = (240, 250, 700, 290)
+
+    # 玩家数据区域，每行一个字典（手动标注坐标）
+    player_boxes = {
+        'row_height': 70,
+        'first_row': {
+            "name_box": (100, 560, 300, 590),
+            "hands_box": (320, 560, 400, 590),
+            "buyin_box": (420, 560, 500, 590),
+            "profit_box": (520, 560, 700, 590)
+        }
+    }
+
+
+
     # 打开图片
     image_path = "/path/to/image.png"
     image = Image.open(image_path)
@@ -22,28 +41,6 @@ def booking_record_pic(image_path):
         {"name": "看君醉", "hands": 311, "buyin": 3000, "profit": 33980},
     ]
     }
-
-
-    # 手动标注的区域坐标（示例）——你需要把这些换成你的坐标
-    title_box = (150, 120, 200, 160)
-    time_box = (240, 250, 700, 290)
-
-    # 玩家数据区域，每行一个字典（手动标注坐标）
-    player_boxes = [
-        {
-            "name_box": (100, 560, 300, 590),
-            "hands_box": (320, 560, 400, 590),
-            "buyin_box": (420, 560, 500, 590),
-            "profit_box": (520, 560, 700, 590)
-        },
-        {
-            "name_box": (100, 630, 300, 660),
-            "hands_box": (320, 630, 400, 660),
-            "buyin_box": (420, 630, 500, 660),
-            "profit_box": (520, 630, 700, 660)
-        },
-        # ... 继续添加更多玩家
-    ]
 
     # 提取比赛名称与时间
     title = pytesseract.image_to_string(image.crop(title_box), lang=tess_lang).strip()
@@ -110,6 +107,16 @@ def get_player_record_data():
 
 
 def get_player_cumsum_scores():
+
+    data = pd.DataFrame(
+        {'player_id': [1, 1, 2, 2, 3, 3],
+         'game_id': [1, 2, 1, 2, 1, 2],
+         'start_time': ['2023-01-01', '2023-01-02', '2023-01-01', '2023-01-02', '2023-01-01', '2023-01-02'],
+         'score': [10, 20, 30, 40, 50, 60]
+         }
+    )
+    return data.to_dict(orient='records')
+
     data = get_player_record_data()
     
     # 获取所有玩家ID
@@ -160,5 +167,17 @@ def get_player_cumsum_scores():
     complete_df['cumulative_score'] = complete_df.groupby('player_id')['score'].cumsum()
     
     return complete_df.to_dict(orient='records')
+
+
+class PlayerRecordCreate(BaseModel):
+    player_id: int
+    game_id: int
+    score: int
+    
+    @validator('score')
+    def validate_score(cls, v):
+        if v < -1000000 or v > 1000000:
+            raise ValueError('分数超出合理范围')
+        return v
 
 

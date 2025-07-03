@@ -3,7 +3,7 @@ from flask_cors import CORS
 from datetime import datetime as dt
 import os
 from werkzeug.utils import secure_filename
-from serveices.curd import get_player_record_data
+from services.curd import get_player_cumsum_scores
 import configparser
 
 
@@ -13,6 +13,18 @@ CORS(app)  # 启用跨域支持
 # 配置
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 app.config['DEBUG'] = True
+
+# 添加数据库配置
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL', 
+    'mysql+pymysql://username:password@localhost/langhuo_db'
+)
+
+# 添加上传文件夹配置
+app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', './uploads')
+
+# 确保上传文件夹存在
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 @app.route('/')
 def home():
@@ -35,20 +47,21 @@ def health_check():
 
 @app.route('/api/enterAuth')
 def enter_auth():
-    token = request.args.get('token')
+    token = request.args.get('password')
     parser = configparser.ConfigParser()
-    compare = parser.get('token', 'token')
+    parser.read('admin.ini')
+    compare = parser.get('password', 'password')
     if token == compare:
         return jsonify({
             'data': 0,
             'status': 'success',
-            'message': 'token 验证成功'
+            'message': 'password 验证成功'
         })
     else:
         return jsonify({
             'data': 1,
             'status': 'error',
-            'message': 'token 验证失败'
+            'message': 'password 验证失败'
         })
 
 @app.route('/api/uploadRecordPic')
@@ -77,7 +90,7 @@ def upload_record_pic():
 @app.route('/api/getPlayerRecord')
 def get_player_record():
     """获取玩家记录接口"""
-    data = get_player_record_data()
+    data = get_player_cumsum_scores()
     return jsonify({
         'data': data,
         'status': 'success',

@@ -149,4 +149,12 @@ logs/
 # Config files with sensitive data
 config.py
 .env.local
-.env.production 
+.env.production
+
+node_modules/
+uploads/
+
+# New additions from the code block
+*.env
+*.log
+*.DS_Store 
