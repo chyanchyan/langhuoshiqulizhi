@@ -149,6 +149,8 @@ logs/
 # Config files with sensitive data
 config.py
 .env.local
+.env.development
+.env.test
 .env.production
 
 node_modules/

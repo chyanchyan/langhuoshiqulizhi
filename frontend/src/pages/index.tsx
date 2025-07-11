@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, Lock } from '@mui/icons-material';
 import axios from 'axios';
-import AccChart from '../components/accChart';
+import { AccProfitChart } from '../components/accProfitchart';
 import API_CONFIG, { getApiUrl } from '../config/api';
 
 export default function HomePage() {
@@ -24,11 +24,15 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [networkStatus, setNetworkStatus] = useState('online');
 
+  return <div><AccProfitChart /></div>
+  // 定义一个异步函数auth，用于验证用户身份
   const auth = async () => {
     try {
+      // 获取API地址
       const apiUrl = getApiUrl(API_CONFIG.ENDPOINTS.AUTH);
       console.log('发送验证请求到:', apiUrl);
       
+      // 发送GET请求，获取响应
       const res = await axios.get(apiUrl, {
         params: { password },
         timeout: 10000 // 10秒超时
@@ -36,16 +40,20 @@ export default function HomePage() {
       
       console.log('收到响应:', res.data);
       
+      // 判断响应状态
       if (res.data.status === 'success') {
+        // 验证成功，设置认证状态为true，并将认证状态存储到localStorage中
         setIsAuthenticated(true);
         localStorage.setItem('isAuthenticated', 'true');
-        setError('');
+        setError(''); // 清空错误信息
       } else {
+        // 验证失败，设置认证状态为false，并设置错误信息
         setIsAuthenticated(false);
         setError('验证失败,请检查口令是否正确');
       }
     } catch (err: any) {
       console.error('验证请求失败:', err);
+      // 判断错误类型，设置相应的错误信息
       if (err.code === 'ECONNABORTED') {
         setError('请求超时，请检查网络连接');
       } else if (err.response) {
@@ -130,7 +138,7 @@ export default function HomePage() {
         </Box>
         
         <Box sx={{ mb: 4 }}>
-          <AccChart />
+          <AccProfitChart />
         </Box>
         
       </Container>
@@ -198,12 +206,12 @@ export default function HomePage() {
               </Alert>
             )}
 
-            {/* API地址显示（开发环境）
+            {/* API地址显示（开发环境） */}
             {process.env.NODE_ENV === 'development' && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 后端地址: {API_CONFIG.BASE_URL}
               </Alert>
-            )} */}
+            )}
 
             <form onSubmit={handleSubmit}>
               <TextField

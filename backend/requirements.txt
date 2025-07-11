@@ -14,3 +14,5 @@ pillow
 pytesseract==0.3.13
 pandas
 numpy
+pydantic
+opencv-python

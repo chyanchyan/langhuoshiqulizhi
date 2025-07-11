@@ -1,8 +1,8 @@
 // API配置
 const API_CONFIG = {
-  // 从环境变量获取API基础URL，如果没有则使用默认值
-  BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://172.30.23.175:5000',
-  
+  // 使用相对路径，通过Koa代理转发
+  BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || '',
+
   // API端点
   ENDPOINTS: {
     AUTH: '/api/enterAuth',

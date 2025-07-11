@@ -3,28 +3,61 @@ from flask_cors import CORS
 from datetime import datetime as dt
 import os
 from werkzeug.utils import secure_filename
-from services.curd import get_player_cumsum_scores
-import configparser
+from services.crud import get_player_cumsum_scores
+from services.db_manager import DbManager
+from dotenv import load_dotenv
 
+# 加载环境变量
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # 启用跨域支持
 
-# 配置
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
-app.config['DEBUG'] = True
+# CORS配置
+cors_origins = os.getenv('CORS_ORIGINS', '*')
+if cors_origins == '*':
+    CORS(app)
+else:
+    CORS(app, origins=cors_origins.split(','))
 
-# 添加数据库配置
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 
-    'mysql+pymysql://username:password@localhost/langhuo_db'
-)
+# 应用配置
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
+app.config['DEBUG'] = os.getenv('DEBUG', 'True').lower() == 'true'
+app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16777216))
 
-# 添加上传文件夹配置
-app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', './uploads')
+# 数据库连接池配置
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': int(os.getenv('DB_POOL_SIZE', 10)),
+    'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', 20)),
+    'pool_timeout': int(os.getenv('DB_POOL_TIMEOUT', 30)),
+    'pool_recycle': int(os.getenv('DB_POOL_RECYCLE', 3600)),
+}
+
+# 文件上传配置
+app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', './uploads')
 
 # 确保上传文件夹存在
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+def init_sys():
+    try:
+        db_manager = DbManager(app)
+
+        # 检查mysql服务是否启动，如果未启动，则启动
+        print("🔍 检查MySQL服务状态...")
+        if not db_manager.check_and_start_mysql():
+            print("❌ MySQL服务启动失败，请检查MySQL是否已安装并配置正确")
+            print("💡 提示：")
+            print("   1. 确保MySQL已正确安装")
+            print("   2. 检查环境变量中的数据库配置")
+            print("   3. 确保数据库用户有足够权限")
+            return False
+        
+        print("✅ MySQL服务运行正常")
+        
+        return True
+    except Exception as e:
+        print(f"❌ 系统初始化失败: {e}")
+        return False
 
 @app.route('/')
 def home():
@@ -32,7 +65,8 @@ def home():
     return jsonify({
         'message': 'langhuo 后端服务',
         'status': 'success',
-        'version': '1.0.0'
+        'version': '1.0.0',
+        'environment': os.getenv('FLASK_ENV', 'development')
     })
 
 @app.route('/api/health')
@@ -41,17 +75,16 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'flask-backend',
-        'timestamp': dt.now().isoformat()
+        'timestamp': dt.now().isoformat(),
+        'environment': os.getenv('FLASK_ENV', 'development')
     })
-
 
 @app.route('/api/enterAuth')
 def enter_auth():
     token = request.args.get('password')
-    parser = configparser.ConfigParser()
-    parser.read('admin.ini')
-    compare = parser.get('password', 'password')
-    if token == compare:
+    admin_password = os.getenv('ADMIN_PASSWORD', '34jinbulai')
+    
+    if token == admin_password:
         return jsonify({
             'data': 0,
             'status': 'success',
@@ -86,7 +119,6 @@ def upload_record_pic():
     else:
         return jsonify({'error': 'Failed to upload file'}), 500
 
-
 @app.route('/api/getPlayerRecord')
 def get_player_record():
     """获取玩家记录接口"""
@@ -108,4 +140,17 @@ def internal_error(error):
     return jsonify({'error': '服务器内部错误'}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True) 
+    print("🚀 启动系统初始化...")
+    if not init_sys():
+        print("❌ 系统初始化失败，程序退出")
+        exit(1)
+    
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('DEBUG', 'True').lower() == 'true'
+    
+    print(f"🚀 启动服务器: http://{host}:{port}")
+    print(f"🔧 调试模式: {debug}")
+    print(f"环境: {os.getenv('FLASK_ENV', 'development')}")
+    
+    app.run(host=host, port=port, debug=debug) 
